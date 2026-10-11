@@ -162,7 +162,7 @@ details.how ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;ga
   <header>
     <h1>Sealed First</h1>
     <p class="lede">Write your take before the AI answers. Seal it, get the AI's answer blind, then record whether you held, updated, or switched. Over time this becomes your personal judgment retention score.</p>
-    <p class="storage" id="storage">Connecting to your private log…</p>
+    <p class="storage" id="storage">Loading your log…</p>
   </header>
 
   <section id="score" aria-label="Your judgment retention score"></section>
@@ -585,7 +585,7 @@ details.how ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;ga
 
   function renderStorage(){
     const el = $("#storage");
-    if (mode === "loading") el.textContent = "Connecting to your private log…";
+    if (mode === "loading") el.textContent = "Loading your log…";
     else if (readOnly) el.innerHTML = "<b>View only.</b> This log belongs to its owner. Ask them to share a copy if you want your own.";
     else if (mode === "db") el.innerHTML = "<b>Private log.</b> Only you can read it. Claude can read it too when you ask for an analysis.";
     else el.innerHTML = "<b>Saved in this browser only.</b> Nothing is sent anywhere. Export your log to back it up or use it with the Sealed First skills.";
