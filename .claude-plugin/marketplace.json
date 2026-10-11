@@ -1,0 +1,28 @@
+{
+  "name": "sealed-first",
+  "owner": {
+    "name": "Andrew Plummer",
+    "email": "drplummer@gmail.com"
+  },
+  "metadata": {
+    "description": "Sealed First: write your answer before the AI does.",
+    "version": "0.2.0"
+  },
+  "plugins": [
+    {
+      "name": "sealed-first",
+      "source": "./plugin",
+      "description": "Seal your own take before an AI answers, get a blind answer, and track whether your judgment holds up. Personal judgment retention score plus team oversight evidence reports.",
+      "version": "0.2.0",
+      "homepage": "https://sealedfirst.com",
+      "license": "MIT",
+      "keywords": [
+        "ai-oversight",
+        "human-in-the-loop",
+        "automation-bias",
+        "judgment",
+        "governance"
+      ]
+    }
+  ]
+}

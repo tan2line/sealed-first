@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sealed First App</title>
+<meta name="description" content="Seal your take before the AI answers, compare blind, and track your judgment retention score. Free, private, in your browser.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow evidence-log column. Score sits on top, then four working tabs: seal, compare, resolve, log. */
+:root{
+  --bg:#F2F4F7; --surface:#FFFFFF; --sunk:#E8ECF2; --ink:#161D2B; --muted:#586274; --line:#D6DCE5;
+  --accent:#2E49C9; --accent-ink:#FFFFFF; --accent-soft:#E4E9FB;
+  --good:#1D7448; --warn:#9A5B00; --bad:#AE2F29; --rt:#7A3E9E; --rt-soft:#F1E8F7;
+  --hatch:rgba(46,73,201,.10);
+  --f-display:"Spectral",Georgia,"Times New Roman",serif;
+  --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F131A; --surface:#161C26; --sunk:#1D2430; --ink:#E5E9F1; --muted:#9AA4B5; --line:#2A3342;
+  --accent:#8FA2FF; --accent-ink:#0F131A; --accent-soft:#232D4D;
+  --good:#5BC28D; --warn:#E2A54D; --bad:#F27D72; --rt:#C9A0E8; --rt-soft:#2A2236; --hatch:rgba(143,162,255,.12); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F131A; --surface:#161C26; --sunk:#1D2430; --ink:#E5E9F1; --muted:#9AA4B5; --line:#2A3342;
+  --accent:#8FA2FF; --accent-ink:#0F131A; --accent-soft:#232D4D;
+  --good:#5BC28D; --warn:#E2A54D; --bad:#F27D72; --rt:#C9A0E8; --rt-soft:#2A2236; --hatch:rgba(143,162,255,.12); color-scheme:dark}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:2rem;font-weight:700;letter-spacing:-.01em}
+p{margin:0}
+.lede{color:var(--muted);max-width:60ch}
+.mono{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.01em}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--muted)}
+.muted{color:var(--muted)}
+header{display:flex;flex-direction:column;gap:6px}
+.storage{font-size:.8rem;color:var(--muted)}
+.storage b{color:var(--ink);font-weight:600}
+
+/* score */
+.score{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;grid-template-columns:auto 1fr;gap:18px 24px;align-items:start}
+.score.example{border-style:dashed}
+.score > *{min-width:0}
+.score-top{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.gauge{display:flex;flex-direction:column;gap:2px;min-width:120px}
+.gauge .num{font-family:var(--f-display);font-size:3.4rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.gauge .band{font-weight:600;font-size:.9rem}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--sunk);color:var(--muted);letter-spacing:.02em}
+.chip.accent{background:var(--accent-soft);color:var(--accent)}
+.chip.rt{background:var(--rt-soft);color:var(--rt)}
+.chip.good{color:var(--good)} .chip.warn{color:var(--warn)} .chip.bad{color:var(--bad)}
+.comps{display:flex;flex-direction:column;gap:10px;min-width:0}
+.comp{display:grid;grid-template-columns:minmax(0,1fr) 3.2rem;gap:4px 10px;align-items:center}
+.comp .name{font-size:.86rem}
+.comp .val{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-size:.86rem}
+.bar{grid-column:1/-1;height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.facts{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;border-top:1px solid var(--line);padding-top:14px}
+.fact .v{font-family:var(--f-display);font-size:1.35rem;font-weight:600;font-variant-numeric:tabular-nums}
+.fact .k{font-size:.78rem;color:var(--muted)}
+.flags{grid-column:1/-1;display:flex;flex-direction:column;gap:6px}
+.flag{font-size:.85rem;padding:8px 10px;border-radius:6px;background:var(--sunk);border-left:3px solid var(--warn)}
+.domains{grid-column:1/-1;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px}
+.tablewrap{overflow-x:auto}
+table.dt{border-collapse:collapse;width:100%;font-size:.84rem;font-variant-numeric:tabular-nums;min-width:460px}
+table.dt th{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--line)}
+table.dt th:first-child,table.dt td:first-child{text-align:left;padding-left:0}
+table.dt td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line)}
+table.dt tr:last-child td{border-bottom:0}
+table.dt td.hot{color:var(--warn);font-weight:600}
+.cadence{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:.86rem}
+.ticks{display:flex;gap:4px;flex-wrap:wrap}
+.ticks span{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--accent)}
+.ticks span.on{background:var(--accent)}
+select,input[type=range]{accent-color:var(--accent)}
+select{font:inherit;font-size:.86rem;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;padding:10px 12px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;display:flex;gap:6px;align-items:center}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .n{font-size:.72rem;min-width:1.4em;padding:0 5px;border-radius:999px;background:var(--sunk);color:var(--muted);font-variant-numeric:tabular-nums}
+.tab .n.hot{background:var(--accent);color:var(--accent-ink)}
+.panel{display:flex;flex-direction:column;gap:14px}
+
+/* forms */
+.form{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.form-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.modes{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.modes button{appearance:none;border:0;background:none;font:inherit;font-size:.82rem;font-weight:600;padding:6px 12px;color:var(--muted);cursor:pointer}
+.modes button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:600;font-size:.9rem}
+.hint{font-size:.8rem;color:var(--muted)}
+textarea,input[type=text]{font:inherit;font-size:.95rem;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);resize:vertical}
+textarea:focus,input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.conf{display:flex;gap:12px;align-items:center}
+.conf input{flex:1;min-width:0}
+.conf output{font-variant-numeric:tabular-nums;font-weight:600;width:3.2em;text-align:right}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{appearance:none;font:inherit;font-weight:600;font-size:.9rem;padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.rt{border-color:var(--rt);color:var(--rt)}
+.btn.ghost{background:none;border-color:transparent;color:var(--muted);padding-inline:8px}
+.btn.danger{color:var(--bad)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{appearance:none;font:inherit;font-size:.86rem;font-weight:500;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.seg.small button{font-size:.8rem;padding:5px 10px}
+.err{color:var(--bad);font-size:.85rem}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.card .q{font-family:var(--f-display);font-size:1.12rem;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.meta{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;font-size:.78rem;color:var(--muted)}
+.sealed{border:1.5px dashed var(--accent);border-radius:8px;padding:12px;background:repeating-linear-gradient(135deg,var(--hatch) 0 6px,transparent 6px 12px);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.sealed strong{font-size:.9rem}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.side{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:6px;min-width:0}
+.side .txt{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.92rem}
+.side.ai{border-color:var(--accent)}
+.side.rt{border-color:var(--rt);background:var(--rt-soft)}
+.side.rt .label{color:var(--rt)}
+.nudge{font-size:.85rem;color:var(--rt)}
+.verify{font-size:.78rem}
+.verify.ok{color:var(--good)} .verify.bad{color:var(--bad)}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:22px;color:var(--muted);display:flex;flex-direction:column;gap:8px}
+.empty b{color:var(--ink)}
+details.how{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+details.how summary{cursor:pointer;font-weight:600}
+details.how .body{display:flex;flex-direction:column;gap:10px;padding-top:10px;max-width:65ch;font-size:.92rem}
+details.how ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.88rem;max-width:calc(100% - 32px);z-index:5}
+@media (max-width:620px){
+  .score{grid-template-columns:1fr}
+  .pair{grid-template-columns:1fr}
+  h1{font-size:1.7rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;color:var(--ink);text-decoration:none;font-size:1rem}
+.brand svg{width:22px;height:22px}
+.io{display:flex;gap:6px;flex-wrap:wrap}
+.io .btn{font-size:.82rem;padding:6px 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="brand" href="/"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="7" width="26" height="18" rx="3" fill="var(--accent)"/><path d="M4 9l12 9 12-9" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="19" r="4.2" fill="var(--surface)"/><circle cx="16" cy="19" r="2.2" fill="var(--accent)"/></svg>sealedfirst.com</a>
+    <div class="io"><button class="btn" type="button" id="io-export">Export log</button><label class="btn" for="io-file" style="cursor:pointer">Import log</label><input type="file" id="io-file" accept="application/json,.json" hidden></div></div>
+  <header>
+    <h1>Sealed First</h1>
+    <p class="lede">Write your take before the AI answers. Seal it, get the AI's answer blind, then record whether you held, updated, or switched. Over time this becomes your personal judgment retention score.</p>
+    <p class="storage" id="storage">Connecting to your private log…</p>
+  </header>
+
+  <section id="score" aria-label="Your judgment retention score"></section>
+
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+  <section class="panel" id="panel" aria-live="polite"></section>
+
+  <details class="how">
+    <summary>How the score works</summary>
+    <div class="body">
+      <p>The score is 0 to 100 and looks at your last 90 days. It needs at least one seal with a known outcome, and it is marked provisional until you have five. Pick a domain above the score to see it for that area alone.</p>
+      <ul>
+        <li><b>Final calls right (45%).</b> After seeing the AI, was your final position the one that held up?</li>
+        <li><b>Confidence matches results (25%).</b> If you say 80% sure, your sealed takes should be right about 80% of the time.</li>
+        <li><b>Kept the cadence (15%).</b> Seals logged in the last four weeks against your weekly target.</li>
+        <li><b>Explained changes of mind (15%).</b> Every update or switch carries a written reason.</li>
+      </ul>
+      <p><b>Red team.</b> When you and the AI agree, you can both be wrong in the same way. The red-team step gives you a prompt that asks any AI for the strongest case against both answers. It only runs after the reveal, so it can't leak into your take.</p>
+      <p><b>Quick capture.</b> Open this page with <span class="mono">#quick</span> at the end of its link to land straight on the 15-second form.</p>
+      <p>Plain English: it's a sealed envelope. You write your answer and seal it, then open the AI's answer. The stack of envelopes shows whether you are still doing the thinking or just signing off.</p>
+      <p>Each seal gets a fingerprint when you save it. When you reveal, the page checks the fingerprint, so you can trust the take wasn't edited after you saw the AI. Only paste the question into the AI before the reveal. Your sealed take stays out of it until after.</p>
+    </div>
+  </details>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const DAY = 864e5;
+  const LS = "sealed-first-v1";
+  const PREF = "sealed-first-prefs";
+  const TAGS = [["clinical","Clinical"],["policy","Policy & governance"],["venture","Venture"],["technical","Technical"],["other","Other"]];
+  const tagName = t => (TAGS.find(x => x[0] === t) || TAGS[4])[1];
+  const QUICK_CONF = [[60,"Hunch"],[75,"Fairly sure"],[90,"Sure"]];
+
+  let db = null, sample = null, mode = "loading", readOnly = false;
+  let seals = [];
+  let settings = { weekly: 3 };
+  let tab = "new", scoreTag = "all";
+  const ui = {};
+  const prefs = (() => { try { return JSON.parse(localStorage.getItem(PREF) || "{}"); } catch(e){ return {}; } })();
+  const savePrefs = () => { try { localStorage.setItem(PREF, JSON.stringify(prefs)); } catch(e){} };
+  const form = { q: "", take: "", conf: 70, tag: prefs.tag || "policy",
+    mode: location.hash === "#quick" ? "quick" : (prefs.mode || (window.innerWidth < 620 ? "quick" : "full")) };
+  const verified = {};
+
+  const U = id => (ui[id] ||= { ai: "", busy: false, err: "", paste: false, pasteText: "", verdict: "", final: "", why: "", ctl: null, confirmDel: false, rt: "", rtBusy: false, rtCtl: null, rtPaste: false, rtPasteText: "" });
+
+  /* ---------- storage ---------- */
+  function lsLoad(){ try{ const v = JSON.parse(localStorage.getItem(LS) || "null"); if (v){ seals = v.seals || []; settings = { ...settings, ...(v.settings || {}) }; } }catch(e){} }
+  function lsSave(){ try{ localStorage.setItem(LS, JSON.stringify({ seals, settings })); }catch(e){} }
+  const body = s => { const { id, ...rest } = s; return JSON.parse(JSON.stringify(rest)); };
+
+  async function putSeal(s){
+    const i = seals.findIndex(x => x.id === s.id);
+    if (i >= 0) seals[i] = s; else seals.push(s);
+    render();
+    if (mode === "db"){
+      try { await db.collection("seals").doc(s.id).set(body(s)); }
+      catch(e){ toast(e?.code === "quota_exceeded" ? "Your log is full. Delete old seals to add more." : "That didn't save. Check your connection and try again."); }
+    } else lsSave();
+  }
+  async function delSeal(id){
+    seals = seals.filter(s => s.id !== id); delete ui[id]; render();
+    if (mode === "db"){ try { await db.collection("seals").doc(id).delete(); } catch(e){ toast("Delete didn't go through. Try again."); } }
+    else lsSave();
+  }
+  async function saveSettings(){
+    if (mode === "db"){ try { await db.doc("settings/main").set({ ...settings }); } catch(e){ toast("Couldn't save the weekly target."); } }
+    else lsSave();
+  }
+
+  /* ---------- helpers ---------- */
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID().replace(/-/g,"").slice(0,20) : (Date.now().toString(36) + Math.random().toString(36).slice(2,10)));
+  async function fingerprint(text){
+    try{
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+      return [...new Uint8Array(buf)].slice(0,6).map(b => b.toString(16).padStart(2,"0")).join("");
+    }catch(e){
+      let h = 2166136261; for (const ch of text){ h ^= ch.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; }
+      return "f" + h.toString(16).padStart(8,"0");
+    }
+  }
+  const sealText = s => s.q + "\n" + s.take + "\n" + s.createdAt;
+  async function verify(s){
+    if (!s.hash || s.id in verified) return;
+    verified[s.id] = (await fingerprint(sealText(s))) === s.hash;
+    render();
+  }
+  const fmt = ms => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const weekStart = () => { const d = new Date(); d.setHours(0,0,0,0); const k = (d.getDay() + 6) % 7; d.setDate(d.getDate() - k); return d.getTime(); };
+  const pct = (a, b) => b ? Math.round(100 * a / b) : null;
+  let toastT;
+  function toast(msg){
+    let el = $(".toast"); if (!el){ el = document.createElement("div"); el.className = "toast"; el.setAttribute("role","status"); document.body.append(el); }
+    el.textContent = msg; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 3600);
+  }
+  async function copy(text, okMsg){
+    try { await navigator.clipboard.writeText(text); toast(okMsg); }
+    catch(e){
+      const ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly",""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.append(ta); ta.select();
+      let ok = false; try { ok = document.execCommand("copy"); } catch(_){}
+      ta.remove(); toast(ok ? okMsg : "Copy didn't work here. Select the text and copy it by hand.");
+    }
+  }
+
+  /* ---------- scoring ---------- */
+  function stats(tag = "all"){
+    const inTag = s => tag === "all" || (s.tag || "other") === tag;
+    const W = seals.filter(s => (s.createdAt || 0) >= Date.now() - 90 * DAY && inTag(s));
+    const judged = W.filter(s => s.status === "judged" || s.status === "resolved");
+    const div = judged.filter(s => s.verdict && s.verdict !== "agree");
+    const agreed = judged.filter(s => s.verdict === "agree");
+    const switched = div.filter(s => s.final === "switched");
+    const res = W.filter(s => s.status === "resolved" && ["me","ai","both","neither"].includes(s.outcome));
+    const meRight = s => s.outcome === "me" || s.outcome === "both";
+    const aiRight = s => s.outcome === "ai" || s.outcome === "both";
+    const callRight = s => s.final === "held" ? meRight(s) : s.final === "switched" ? aiRight(s) : s.outcome !== "neither";
+    const meAcc = pct(res.filter(meRight).length, res.length);
+    const aiAcc = pct(res.filter(aiRight).length, res.length);
+    const callAcc = pct(res.filter(callRight).length, res.length);
+    const avgConf = res.length ? Math.round(res.reduce((a,s) => a + (s.conf || 50), 0) / res.length) : null;
+    const gap = res.length ? avgConf - meAcc : null;
+    const calib = res.length ? Math.max(0, 100 - 2 * Math.abs(gap)) : null;
+    const recent = seals.filter(s => (s.createdAt || 0) >= Date.now() - 28 * DAY && inTag(s)).length;
+    const disc = tag === "all" ? Math.min(100, pct(recent, settings.weekly * 4)) : null;
+    const changed = judged.filter(s => s.final === "updated" || s.final === "switched");
+    const reasoned = changed.length ? pct(changed.filter(s => (s.why || "").trim().length >= 10).length, changed.length) : null;
+    const parts = [[callAcc,45],[calib,25],[disc,15],[reasoned,15]].filter(([v]) => v != null);
+    const wsum = parts.reduce((a,[,w]) => a + w, 0);
+    const score = res.length ? Math.round(parts.reduce((a,[v,w]) => a + v * w, 0) / wsum) : null;
+    const week = seals.filter(s => (s.createdAt || 0) >= weekStart()).length;
+    return {
+      score, provisional: res.length < 5, nRes: res.length, nJudged: judged.length, nAgree: agreed.length,
+      callAcc, calib, gap, disc, reasoned, meAcc, aiAcc,
+      divergence: pct(div.length, judged.length), deference: pct(switched.length, div.length),
+      rtRate: pct(agreed.filter(s => s.redteam).length, agreed.length),
+      week, recent, n: W.length
+    };
+  }
+  function domainRows(){
+    return TAGS.map(([t, name]) => ({ t, name, st: stats(t) })).filter(r => r.st.n > 0);
+  }
+  const EXAMPLE = { score: 74, provisional: false, nRes: 9, nJudged: 12, nAgree: 8, callAcc: 78, calib: 82, gap: 9, disc: 67, reasoned: 100, meAcc: 67, aiAcc: 72, divergence: 33, deference: 50, rtRate: 38, week: 2, recent: 8, n: 14 };
+  const EXAMPLE_DOMAINS = [
+    { name: "Policy & governance", st: { n: 6, divergence: 17, deference: 0, meAcc: 80, aiAcc: 60, callAcc: 80 } },
+    { name: "Clinical", st: { n: 4, divergence: 50, deference: 100, meAcc: 50, aiAcc: 75, callAcc: 75 } },
+    { name: "Venture", st: { n: 4, divergence: 50, deference: 50, meAcc: 67, aiAcc: 67, callAcc: 67 } }
+  ];
+  const band = s => s == null ? ["Not scored yet","muted"] : s >= 80 ? ["Strong retention","good"] : s >= 60 ? ["Holding","good"] : s >= 40 ? ["Slipping","warn"] : ["Deferring","bad"];
+
+  function flags(st, rows){
+    const out = [];
+    if (st.nJudged >= 8 && st.divergence != null && st.divergence < 15) out.push("You almost never disagree with the AI. Try harder questions, or check whether you're writing the take you expect it to give.");
+    if (st.nRes >= 5 && st.deference != null && st.deference >= 60 && st.aiAcc != null && st.meAcc != null && st.aiAcc <= st.meAcc) out.push("You switch to the AI in most disagreements, but your record doesn't show it being right more often than you.");
+    if (st.nRes >= 5 && st.gap != null && st.gap >= 20) out.push(`Your confidence runs about ${st.gap} points above your results. Sealed takes are worth more when the confidence is honest.`);
+    if (st.nRes >= 5 && st.gap != null && st.gap <= -20) out.push(`You're right more often than you think, by about ${-st.gap} points. Holding your ground may be cheaper than you assume.`);
+    if (st.nAgree >= 5 && st.rtRate != null && st.rtRate < 20) out.push("You rarely red-team the answers you agree with. Shared blind spots live in agreements.");
+    (rows || []).forEach(r => {
+      if (r.st.nRes >= 3 && r.st.deference != null && r.st.deference >= 60 && r.st.aiAcc != null && r.st.aiAcc <= r.st.meAcc)
+        out.push(`In ${r.name}, you defer to the AI more than its track record there supports.`);
+    });
+    return out;
+  }
+
+  /* ---------- render ---------- */
+  function renderScore(){
+    const isEx = mode !== "loading" && seals.length === 0;
+    const st = isEx ? EXAMPLE : stats(scoreTag);
+    const rows = isEx ? EXAMPLE_DOMAINS : domainRows();
+    const [bname, bcls] = band(st.score);
+    const comp = (name, v, note) => `
+      <div class="comp"><span class="name">${name}${note ? ` <span class="muted">· ${note}</span>` : ""}</span>
+      <span class="val">${v == null ? "—" : v}</span>
+      <div class="bar"><i style="width:${v ?? 0}%"></i></div></div>`;
+    const ticks = Array.from({ length: settings.weekly }, (_, i) => `<span class="${i < st.week ? "on" : ""}"></span>`).join("");
+    const left = Math.max(0, settings.weekly - st.week);
+    const fl = isEx ? [] : flags(st, scoreTag === "all" ? rows : []);
+    const usedTags = isEx ? [] : TAGS.filter(([t]) => seals.some(s => (s.tag || "other") === t));
+    const cell = (v, hot) => `<td class="${hot ? "hot" : ""}">${v == null ? "—" : v + "%"}</td>`;
+    $("#score").innerHTML = `
+    <div class="score ${isEx ? "example" : ""}">
+      <div class="score-top">
+        <span class="label">${scoreTag === "all" ? "All domains" : esc(tagName(scoreTag))}</span>
+        ${usedTags.length > 1 ? `<label class="row" style="gap:6px"><span class="muted" style="font-size:.82rem">Show</span>
+          <select id="scoretag"><option value="all">All domains</option>${usedTags.map(([t,n]) => `<option value="${t}" ${t === scoreTag ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>` : ""}
+      </div>
+      <div class="gauge">
+        <span class="label">Judgment retention</span>
+        <span class="num">${st.score ?? "—"}</span>
+        <span class="band" style="color:var(--${bcls})">${bname}</span>
+        <div class="chips">
+          ${isEx ? `<span class="chip accent">Example</span>` : ""}
+          ${!isEx && st.score != null && st.provisional ? `<span class="chip warn">Provisional · ${st.nRes} of 5 resolved</span>` : ""}
+          ${!isEx && st.score == null ? `<span class="chip">Resolve a seal to score</span>` : ""}
+        </div>
+      </div>
+      <div class="comps">
+        ${comp("Final calls right", st.callAcc)}
+        ${comp("Confidence matches results", st.calib, st.gap == null ? "" : st.gap > 0 ? `${st.gap} pts over` : st.gap < 0 ? `${-st.gap} pts under` : "on target")}
+        ${scoreTag === "all" ? comp("Kept the cadence", st.disc, `${st.recent} in 4 wks`) : ""}
+        ${comp("Explained changes of mind", st.reasoned)}
+      </div>
+      <div class="facts">
+        <div class="fact"><div class="v">${st.divergence == null ? "—" : st.divergence + "%"}</div><div class="k">of answers you disagreed with</div></div>
+        <div class="fact"><div class="v">${st.deference == null ? "—" : st.deference + "%"}</div><div class="k">of disagreements where you switched</div></div>
+        <div class="fact"><div class="v">${st.meAcc == null ? "—" : st.meAcc + "% / " + st.aiAcc + "%"}</div><div class="k">right on resolved: you / AI</div></div>
+        <div class="fact"><div class="v">${st.rtRate == null ? "—" : st.rtRate + "%"}</div><div class="k">of agreements red-teamed</div></div>
+      </div>
+      ${fl.length ? `<div class="flags">${fl.map(f => `<div class="flag">${esc(f)}</div>`).join("")}</div>` : ""}
+      ${scoreTag === "all" && rows.length ? `<div class="domains">
+        <span class="label">By domain${isEx ? " · example" : ""}</span>
+        <div class="tablewrap"><table class="dt">
+          <thead><tr><th>Domain</th><th>Seals</th><th>Disagreed</th><th>Switched</th><th>You right</th><th>AI right</th><th>Calls right</th></tr></thead>
+          <tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${r.st.n}</td>${cell(r.st.divergence)}${cell(r.st.deference, r.st.deference >= 60)}${cell(r.st.meAcc)}${cell(r.st.aiAcc)}${cell(r.st.callAcc)}</tr>`).join("")}</tbody>
+        </table></div>
+      </div>` : ""}
+      <div class="cadence">
+        <span class="label">This week</span>
+        <span class="ticks" aria-label="${st.week} of ${settings.weekly} seals this week">${ticks}</span>
+        <span>${isEx ? "Example: 2 of 3 seals" : left ? `${left} more to hit your target` : "Target met. Seal again whenever a call matters."}</span>
+        <label class="row" style="gap:6px;margin-left:auto">
+          <span class="muted" style="font-size:.82rem">Weekly target</span>
+          <select id="weekly" ${readOnly ? "disabled" : ""}>${[1,2,3,4,5,7,10].map(n => `<option value="${n}" ${n == settings.weekly ? "selected" : ""}>${n}</option>`).join("")}</select>
+        </label>
+      </div>
+      ${isEx ? `<p class="muted" style="grid-column:1/-1;font-size:.86rem">These numbers are an example of what you'll see. Your own score starts after your first seal has a known outcome.</p>` : ""}
+    </div>`;
+  }
+
+  function counts(){
+    return {
+      open: seals.filter(s => s.status === "sealed" || s.status === "revealed").length,
+      resolve: seals.filter(s => s.status === "judged").length,
+      log: seals.filter(s => s.status === "resolved").length
+    };
+  }
+  function renderTabs(){
+    const c = counts();
+    const t = [["new","Seal a take",null],["open","Compare",c.open],["resolve","Resolve",c.resolve],["log","Log",c.log]];
+    $("#tabs").innerHTML = t.map(([id, name, n]) => `
+      <button class="tab" role="tab" id="tab-${id}" aria-selected="${tab === id}" data-tab="${id}">${name}${n != null ? `<span class="n ${n && id !== "log" ? "hot" : ""}">${n}</span>` : ""}</button>`).join("");
+  }
+
+  function tagSeg(small){
+    return `<div class="seg ${small ? "small" : ""}" role="group" aria-label="Domain">${TAGS.map(([t,n]) => `<button type="button" data-act="tag" data-val="${t}" aria-pressed="${form.tag === t}">${esc(n)}</button>`).join("")}</div>`;
+  }
+
+  function renderNew(){
+    const disabled = mode === "loading" || readOnly;
+    const head = `<div class="form-head"><span class="label">${form.mode === "quick" ? "Quick seal · about 15 seconds" : "Full seal"}</span>
+      <div class="modes" role="group" aria-label="Form length"><button type="button" data-act="mode" data-val="quick" aria-pressed="${form.mode === "quick"}">Quick</button><button type="button" data-act="mode" data-val="full" aria-pressed="${form.mode === "full"}">Full</button></div></div>`;
+    if (form.mode === "quick"){
+      return `<div class="form">${head}
+        <div class="field"><label for="f-q">Question</label><input type="text" id="f-q" value="${esc(form.q)}" placeholder="One clinic or three for the pilot?" autocomplete="off"></div>
+        <div class="field"><label for="f-take">Your take</label><input type="text" id="f-take" value="${esc(form.take)}" placeholder="One. The baseline is too noisy across three." autocomplete="off"></div>
+        <div class="field"><span class="label">How sure</span>
+          <div class="seg small" role="group">${QUICK_CONF.map(([v,l]) => `<button type="button" data-act="qconf" data-val="${v}" aria-pressed="${form.conf === v}">${l} · ${v}%</button>`).join("")}</div></div>
+        <div class="field"><span class="label">Domain</span>${tagSeg(true)}</div>
+        <div class="row">
+          ${sample ? `<button class="btn primary" data-act="seal-ask" ${disabled ? "disabled" : ""}>Seal and ask Claude</button>` : ""}
+          <button class="btn ${sample ? "" : "primary"}" data-act="seal" ${disabled ? "disabled" : ""}>Seal only</button>
+          <span class="err" id="f-err"></span>
+        </div>
+      </div>`;
+    }
+    return `
+    <div class="form">${head}
+      <div class="field">
+        <label for="f-q">The question</label>
+        <textarea id="f-q" rows="2" placeholder="Should we pilot the prior-auth assistant in one clinic or three?">${esc(form.q)}</textarea>
+        <span class="hint">This is the only thing the AI will see.</span>
+      </div>
+      <div class="field">
+        <label for="f-take">Your take, before you ask</label>
+        <textarea id="f-take" rows="4" placeholder="One clinic. The denial-rate baseline is too noisy across three to see an effect in 90 days.">${esc(form.take)}</textarea>
+        <span class="hint">A sentence or two is enough. Once sealed, it can't be edited.</span>
+      </div>
+      <div class="field">
+        <label for="f-conf">How sure are you?</label>
+        <div class="conf"><input type="range" id="f-conf" min="50" max="100" step="5" value="${form.conf}"><output id="f-conf-out">${form.conf}%</output></div>
+        <span class="hint">50% is a coin flip. This is what the confidence score checks against.</span>
+      </div>
+      <div class="field"><span class="label">Domain</span>${tagSeg(false)}<span class="hint">Lets you see where you hold up and where you defer.</span></div>
+      <div class="row">
+        <button class="btn primary" data-act="seal" ${disabled ? "disabled" : ""}>Seal it</button>
+        ${sample ? `<button class="btn" data-act="seal-ask" ${disabled ? "disabled" : ""}>Seal and ask Claude</button>` : ""}
+        <span class="err" id="f-err"></span>
+      </div>
+    </div>`;
+  }
+
+  function sealedBox(s){
+    return `<div class="sealed"><div><strong>Your take is sealed</strong> <span class="muted" style="font-size:.85rem">· ${s.conf}% sure</span></div><span class="mono muted">fingerprint ${esc(s.hash || "—")}</span></div>`;
+  }
+  function seg(id, field, opts, cur){
+    return `<div class="seg" role="group">${opts.map(([v,l]) => `<button type="button" data-act="pick" data-id="${id}" data-field="${field}" data-val="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
+  }
+
+  function redteamBlock(s){
+    const u = U(s.id);
+    if (s.redteam) return `<div class="side rt"><span class="label">Red team · the case against both</span><div class="txt">${esc(s.redteam)}</div></div>`;
+    const nudge = (u.verdict === "agree" || s.verdict === "agree") ? `<p class="nudge">You agreed. Shared blind spots hide in agreements, so this is when a red-team pass pays off.</p>` : "";
+    if (u.rtBusy || u.rt) return `<div class="side rt"><span class="label">Red team · the case against both</span><div class="txt">${u.rt ? esc(u.rt) : "Thinking…"}</div>${u.rtBusy ? `<div><button class="btn ghost" data-act="rt-stop" data-id="${s.id}">Stop</button></div>` : ""}</div>`;
+    if (u.rtPaste) return `${nudge}<div class="field"><label for="rp-${s.id}">Paste the red-team answer</label><textarea id="rp-${s.id}" data-rtpaste="${s.id}" rows="4">${esc(u.rtPasteText)}</textarea></div>
+      <div class="row"><button class="btn rt" data-act="rt-save" data-id="${s.id}">Save red team</button><button class="btn ghost" data-act="rt-paste-off" data-id="${s.id}">Cancel</button></div>`;
+    if (readOnly) return "";
+    return `${nudge}<div class="row">
+      ${sample ? `<button class="btn rt" data-act="redteam" data-id="${s.id}">Red-team both answers</button>` : `<button class="btn rt" data-act="rt-copy" data-id="${s.id}">Copy red-team prompt</button><button class="btn ghost" data-act="rt-paste-on" data-id="${s.id}">Paste result</button>`}
+    </div>`;
+  }
+
+  function renderOpenCard(s){
+    const u = U(s.id);
+    if (s.status === "sealed"){
+      const live = u.busy || u.ai;
+      return `<article class="card">
+        <div class="meta"><span>Sealed ${fmt(s.createdAt)}</span><span class="chip">${esc(tagName(s.tag))}</span></div>
+        <div class="q">${esc(s.q)}</div>
+        ${sealedBox(s)}
+        ${live ? `<div class="side ai"><span class="label">Claude, answering blind</span><div class="txt">${u.ai ? esc(u.ai) : "Thinking…"}</div>${u.busy ? `<div><button class="btn ghost" data-act="stop" data-id="${s.id}">Stop</button></div>` : ""}</div>` : ""}
+        ${u.paste ? `<div class="field"><label for="p-${s.id}">Paste the other AI's answer</label><textarea id="p-${s.id}" data-paste="${s.id}" rows="5" placeholder="Paste the full answer here">${esc(u.pasteText)}</textarea></div>` : ""}
+        ${u.err ? `<p class="err">${esc(u.err)}</p>` : ""}
+        <div class="row">
+          ${u.paste
+            ? `<button class="btn primary" data-act="reveal-paste" data-id="${s.id}" ${readOnly ? "disabled" : ""}>Reveal and compare</button><button class="btn ghost" data-act="paste-off" data-id="${s.id}">Cancel</button>`
+            : `${sample && !u.busy ? `<button class="btn primary" data-act="ask" data-id="${s.id}" ${readOnly ? "disabled" : ""}>Ask Claude blind</button>` : ""}
+               ${!u.busy ? `<button class="btn" data-act="paste-on" data-id="${s.id}">Paste another AI's answer</button><button class="btn ghost" data-act="copy-q" data-id="${s.id}">Copy question</button>` : ""}`}
+          ${!u.busy ? delCtl(s) : ""}
+        </div>
+        ${!sample && !u.paste ? `<p class="hint">Copy only the question into any AI, in a fresh chat, then paste its answer here.</p>` : ""}
+      </article>`;
+    }
+    const v = verified[s.id];
+    const needWhy = u.final === "updated" || u.final === "switched";
+    return `<article class="card">
+      <div class="meta"><span>Sealed ${fmt(s.createdAt)}</span><span>Revealed ${fmt(s.revealedAt)}</span><span class="chip">${esc(tagName(s.tag))}</span></div>
+      <div class="q">${esc(s.q)}</div>
+      <div class="pair">
+        <div class="side"><span class="label">Your sealed take · ${s.conf}% sure</span><div class="txt">${esc(s.take)}</div>
+          <span class="verify ${v === true ? "ok" : v === false ? "bad" : ""}">${v === true ? "Seal intact · written before the reveal" : v === false ? "Fingerprint mismatch · this take changed after sealing" : "Checking seal…"}</span></div>
+        <div class="side ai"><span class="label">${s.aiSource === "claude" ? "Claude, answered blind" : "Pasted AI answer"}</span><div class="txt">${esc(s.ai)}</div></div>
+      </div>
+      <div class="field"><span class="label">How do they compare?</span>${seg(s.id, "verdict", [["agree","Agree"],["partly","Partly"],["disagree","Disagree"]], u.verdict)}</div>
+      ${redteamBlock(s)}
+      <div class="field"><span class="label">Where did you land?</span>${seg(s.id, "final", [["held","Held my take"],["updated","Updated it"],["switched","Switched to the AI's"]], u.final)}</div>
+      <div class="field">
+        <label for="w-${s.id}">${needWhy ? "What changed your mind?" : "Note (optional)"}</label>
+        <textarea id="w-${s.id}" data-why="${s.id}" rows="2" placeholder="${needWhy ? "Name the fact or argument that moved you" : "Anything worth remembering"}">${esc(u.why)}</textarea>
+      </div>
+      ${u.err ? `<p class="err">${esc(u.err)}</p>` : ""}
+      <div class="row"><button class="btn primary" data-act="judge" data-id="${s.id}" ${readOnly ? "disabled" : ""}>Log my judgment</button>${delCtl(s)}</div>
+    </article>`;
+  }
+
+  function delCtl(s){
+    if (readOnly) return "";
+    const u = U(s.id);
+    return u.confirmDel
+      ? `<span class="row" style="margin-left:auto;gap:4px"><button class="btn danger" data-act="del-yes" data-id="${s.id}">Delete seal</button><button class="btn ghost" data-act="del-no" data-id="${s.id}">Keep</button></span>`
+      : `<button class="btn ghost" style="margin-left:auto" data-act="del" data-id="${s.id}">Delete</button>`;
+  }
+
+  const finalLabel = { held: "Held", updated: "Updated", switched: "Switched" };
+  const verdictLabel = { agree: "Agreed", partly: "Partly agreed", disagree: "Disagreed" };
+  function renderResolveCard(s){
+    return `<article class="card">
+      <div class="meta"><span>Sealed ${fmt(s.createdAt)}</span><span class="chip">${esc(tagName(s.tag))}</span><span class="chip">${verdictLabel[s.verdict] || ""}</span><span class="chip accent">${finalLabel[s.final] || ""}</span>${s.redteam ? `<span class="chip rt">Red-teamed</span>` : ""}</div>
+      <div class="q">${esc(s.q)}</div>
+      <div class="pair">
+        <div class="side"><span class="label">Your sealed take · ${s.conf}%</span><div class="txt">${esc(s.take)}</div></div>
+        <div class="side ai"><span class="label">AI answer</span><div class="txt">${esc(s.ai)}</div></div>
+      </div>
+      ${redteamBlock(s)}
+      ${s.why ? `<p class="muted" style="font-size:.88rem"><b style="color:var(--ink)">Your note:</b> ${esc(s.why)}</p>` : ""}
+      <div class="field"><span class="label">Now that you know, who was right?</span>
+        <div class="seg" role="group">
+          ${[["me","My sealed take"],["ai","The AI"],["both","Both"],["neither","Neither"],["na","Can't be checked"]].map(([v,l]) => `<button type="button" data-act="outcome" data-id="${s.id}" data-val="${v}" ${readOnly ? "disabled" : ""}>${l}</button>`).join("")}
+        </div>
+        <span class="hint">Come back when the result is in. "Can't be checked" keeps it out of the accuracy numbers.</span>
+      </div>
+      <div class="row">${delCtl(s)}</div>
+    </article>`;
+  }
+
+  const outLabel = { me: "You were right", ai: "AI was right", both: "Both right", neither: "Neither right", na: "Not checkable" };
+  const outCls = { me: "good", ai: "warn", both: "good", neither: "bad", na: "" };
+  function renderLogRow(s){
+    return `<article class="card">
+      <div class="meta"><span>${fmt(s.createdAt)}</span><span class="chip">${esc(tagName(s.tag))}</span><span class="chip">${verdictLabel[s.verdict] || ""}</span><span class="chip accent">${finalLabel[s.final] || ""}</span><span class="chip ${outCls[s.outcome]}">${outLabel[s.outcome] || ""}</span>${s.redteam ? `<span class="chip rt">Red-teamed</span>` : ""}<span>${s.conf}% sure</span></div>
+      <div class="q" style="font-size:1rem">${esc(s.q)}</div>
+      <p style="font-size:.88rem;overflow-wrap:anywhere"><span class="muted">You:</span> ${esc(s.take)}</p>
+      ${s.why ? `<p style="font-size:.85rem" class="muted">Note: ${esc(s.why)}</p>` : ""}
+      <div class="row">${delCtl(s)}</div>
+    </article>`;
+  }
+
+  function emptyBox(title, text){ return `<div class="empty"><b>${title}</b><span>${text}</span></div>`; }
+
+  function renderPanel(){
+    const el = $("#panel");
+    if (tab === "new"){ el.innerHTML = renderNew(); return; }
+    if (mode === "loading"){ el.innerHTML = emptyBox("Loading your seals…", "This takes a moment the first time."); return; }
+    if (tab === "open"){
+      const list = seals.filter(s => s.status === "sealed" || s.status === "revealed").sort((a,b) => b.createdAt - a.createdAt);
+      el.innerHTML = list.length ? list.map(renderOpenCard).join("") : emptyBox("Nothing to compare", "Seal a take first. It waits here until you get the AI's answer.");
+      list.filter(s => s.status === "revealed").forEach(verify);
+      return;
+    }
+    if (tab === "resolve"){
+      const list = seals.filter(s => s.status === "judged").sort((a,b) => a.createdAt - b.createdAt);
+      el.innerHTML = list.length ? list.map(renderResolveCard).join("") : emptyBox("No outcomes waiting", "After you log a judgment, it lands here until you know who was right.");
+      return;
+    }
+    const list = seals.filter(s => s.status === "resolved").sort((a,b) => (b.resolvedAt || 0) - (a.resolvedAt || 0));
+    el.innerHTML = list.length ? list.map(renderLogRow).join("") : emptyBox("Your log is empty", "Resolved seals collect here. They are the evidence behind your score.");
+  }
+
+  function renderStorage(){
+    const el = $("#storage");
+    if (mode === "loading") el.textContent = "Connecting to your private log…";
+    else if (readOnly) el.innerHTML = "<b>View only.</b> This log belongs to its owner. Ask them to share a copy if you want your own.";
+    else if (mode === "db") el.innerHTML = "<b>Private log.</b> Only you can read it. Claude can read it too when you ask for an analysis.";
+    else el.innerHTML = "<b>Saved in this browser only.</b> Nothing is sent anywhere. Export your log to back it up or use it with the Sealed First skills.";
+  }
+
+  function render(){ renderStorage(); renderScore(); renderTabs(); renderPanel(); }
+
+  /* ---------- actions ---------- */
+  async function doSeal(){
+    const err = $("#f-err");
+    const q = form.q.trim(), take = form.take.trim();
+    if (q.length < 5){ err.textContent = "Write the question first."; return null; }
+    if (take.length < 3){ err.textContent = "Write your take before sealing."; return null; }
+    const createdAt = Date.now();
+    const s = { id: uid(), q, take, conf: form.conf, tag: form.tag, createdAt, status: "sealed" };
+    s.hash = await fingerprint(sealText(s));
+    form.q = ""; form.take = "";
+    tab = "open";
+    await putSeal(s);
+    return s;
+  }
+
+  function prompt(q){
+    return `Answer the question below on your own. You have not seen anyone else's view of it.
+
+Give your position and the main reasons in under 150 words. Commit to a position. Don't hedge to stay agreeable, and say plainly if it can't be answered with confidence.
+End with one line that starts "Bottom line:".
+
+Question:
+${q}`;
+  }
+  function rtPrompt(s, verdict){
+    return `You are an adversarial reviewer. Below are two answers to the same question: a person's take, written before they saw any AI output, and an AI's independent answer.${verdict === "agree" ? " The two broadly agree." : ""}
+
+Make the strongest case that BOTH are wrong or missing something important, in under 150 words:
+1. The shared assumption most likely to fail.
+2. The best counter-position a smart skeptic would take.
+3. The one piece of evidence that would settle it.
+Don't summarize either answer and don't pick a winner.
+
+Question:
+${s.q}
+
+Person's take:
+${s.take}
+
+AI's answer:
+${s.ai}`;
+  }
+  const sampleMsg = c => ({
+    not_granted: "Claude access wasn't allowed for this page. Paste another AI's answer instead.",
+    sampling_disabled: "Claude isn't available on this account. Paste another AI's answer instead.",
+    rate_limited: "Too many requests right now. Try again in a few minutes, or paste an answer.",
+    refused: "Claude declined this question. Paste another AI's answer instead.",
+    session_expired: "Sign in to Claude again, then retry."
+  }[c] || "Claude didn't finish answering. Try again, or paste an answer.");
+  const dead = c => ["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"].includes(c);
+
+  async function ask(id){
+    const s = seals.find(x => x.id === id); if (!s || !sample) return;
+    const u = U(id); u.busy = true; u.err = ""; u.ai = ""; u.ctl = new AbortController(); render();
+    try{
+      const { text } = await sample(prompt(s.q), { signal: u.ctl.signal, cache: false, onText: ({ text }) => { u.ai = text; renderPanel(); } });
+      u.busy = false;
+      const cur = seals.find(x => x.id === id) || s;
+      await putSeal({ ...cur, ai: text.trim(), aiSource: "claude", revealedAt: Date.now(), status: "revealed" });
+      u.ai = "";
+    }catch(e){
+      u.busy = false; u.ai = "";
+      if (dead(e?.code)) sample = null;
+      if (e?.code !== "cancelled") u.err = sampleMsg(e?.code);
+      render();
+    }
+  }
+
+  async function redteam(id){
+    const s = seals.find(x => x.id === id); if (!s || !sample) return;
+    const u = U(id); u.rtBusy = true; u.rt = ""; u.err = ""; u.rtCtl = new AbortController(); renderPanel();
+    try{
+      const { text } = await sample(rtPrompt(s, u.verdict || s.verdict), { signal: u.rtCtl.signal, cache: false, onText: ({ text }) => { u.rt = text; renderPanel(); } });
+      u.rtBusy = false;
+      const cur = seals.find(x => x.id === id) || s;
+      await putSeal({ ...cur, redteam: text.trim(), redteamAt: Date.now() });
+      u.rt = "";
+    }catch(e){
+      u.rtBusy = false; u.rt = "";
+      if (dead(e?.code)) sample = null;
+      if (e?.code !== "cancelled") u.err = sampleMsg(e?.code).replace("Paste another AI's answer instead.", "Copy the red-team prompt into another AI instead.");
+      render();
+    }
+  }
+
+  async function judge(id){
+    const s = seals.find(x => x.id === id); const u = U(id);
+    if (!u.verdict){ u.err = "Pick how the answers compare."; renderPanel(); return; }
+    if (!u.final){ u.err = "Pick where you landed."; renderPanel(); return; }
+    if ((u.final === "updated" || u.final === "switched") && u.why.trim().length < 10){ u.err = "Write what changed your mind. That's the record that counts."; renderPanel(); return; }
+    u.err = "";
+    await putSeal({ ...s, verdict: u.verdict, final: u.final, why: u.why.trim(), judgedAt: Date.now(), status: "judged" });
+    toast("Logged. Resolve it once you know who was right.");
+  }
+
+  document.addEventListener("input", e => {
+    const t = e.target;
+    if (t.id === "f-q") form.q = t.value;
+    else if (t.id === "f-take") form.take = t.value;
+    else if (t.id === "f-conf"){ form.conf = +t.value; $("#f-conf-out").textContent = t.value + "%"; }
+    else if (t.dataset.paste) U(t.dataset.paste).pasteText = t.value;
+    else if (t.dataset.why) U(t.dataset.why).why = t.value;
+    else if (t.dataset.rtpaste) U(t.dataset.rtpaste).rtPasteText = t.value;
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Enter" && form.mode === "quick" && (e.target.id === "f-q" || e.target.id === "f-take")){
+      e.preventDefault();
+      if (e.target.id === "f-q") $("#f-take")?.focus();
+      else document.querySelector(sample ? '[data-act="seal-ask"]' : '[data-act="seal"]')?.click();
+    }
+  });
+  document.addEventListener("change", e => {
+    if (e.target.id === "weekly"){ settings.weekly = +e.target.value; render(); saveSettings(); }
+    if (e.target.id === "scoretag"){ scoreTag = e.target.value; renderScore(); }
+  });
+  document.addEventListener("click", async e => {
+    const tb = e.target.closest("[data-tab]");
+    if (tb){ tab = tb.dataset.tab; render(); return; }
+    const b = e.target.closest("[data-act]"); if (!b || b.disabled) return;
+    const id = b.dataset.id, act = b.dataset.act, u = id ? U(id) : null;
+    const s = id ? seals.find(x => x.id === id) : null;
+    switch (act){
+      case "mode": form.mode = b.dataset.val; prefs.mode = form.mode; savePrefs(); renderPanel(); $("#f-q")?.focus(); break;
+      case "tag": form.tag = b.dataset.val; prefs.tag = form.tag; savePrefs(); renderPanel(); break;
+      case "qconf": form.conf = +b.dataset.val; renderPanel(); break;
+      case "seal": {
+        b.disabled = true; const ns = await doSeal(); if (b.isConnected) b.disabled = false;
+        if (ns) toast("Sealed. Now get the AI's answer.");
+        break;
+      }
+      case "seal-ask": {
+        b.disabled = true; const ns = await doSeal(); if (b.isConnected) b.disabled = false;
+        if (ns) ask(ns.id);
+        break;
+      }
+      case "ask": ask(id); break;
+      case "stop": u.ctl?.abort(); break;
+      case "copy-q": copy(s.q, "Question copied. Your take stays sealed."); break;
+      case "paste-on": u.paste = true; u.err = ""; renderPanel(); $(`#p-${id}`)?.focus(); break;
+      case "paste-off": u.paste = false; renderPanel(); break;
+      case "reveal-paste":
+        if (u.pasteText.trim().length < 5){ u.err = "Paste the AI's answer first."; renderPanel(); break; }
+        u.paste = false; u.err = "";
+        await putSeal({ ...s, ai: u.pasteText.trim(), aiSource: "pasted", revealedAt: Date.now(), status: "revealed" });
+        u.pasteText = ""; break;
+      case "redteam": redteam(id); break;
+      case "rt-stop": u.rtCtl?.abort(); break;
+      case "rt-copy": copy(rtPrompt(s, u.verdict || s.verdict), "Red-team prompt copied. Paste it into any AI."); u.rtPaste = true; renderPanel(); break;
+      case "rt-paste-on": u.rtPaste = true; renderPanel(); $(`#rp-${id}`)?.focus(); break;
+      case "rt-paste-off": u.rtPaste = false; renderPanel(); break;
+      case "rt-save":
+        if (u.rtPasteText.trim().length < 5){ u.err = "Paste the red-team answer first."; renderPanel(); break; }
+        u.rtPaste = false; u.err = "";
+        await putSeal({ ...s, redteam: u.rtPasteText.trim(), redteamAt: Date.now() });
+        u.rtPasteText = ""; break;
+      case "pick": u[b.dataset.field] = b.dataset.val; u.err = ""; renderPanel(); break;
+      case "judge": judge(id); break;
+      case "outcome":
+        await putSeal({ ...s, outcome: b.dataset.val, resolvedAt: Date.now(), status: "resolved" });
+        toast("Resolved. Your score has been updated."); break;
+      case "del": u.confirmDel = true; renderPanel(); break;
+      case "del-no": u.confirmDel = false; renderPanel(); break;
+      case "del-yes": delSeal(id); break;
+    }
+  });
+
+  /* ---------- boot ---------- */
+  render();
+  if (form.mode === "quick" && location.hash === "#quick") setTimeout(() => $("#f-q")?.focus(), 50);
+  (async () => {
+    const c = window.claude;
+    let user = null;
+    if (c?.use){
+      [db, sample, user] = await Promise.all([
+        c.use("db").catch(() => null), c.use("sample").catch(() => null), c.use("user").catch(() => null)
+      ]);
+    }
+    if (user && typeof user.isOwner === "function"){
+      try { readOnly = !(await Promise.resolve(user.isOwner())); } catch(e){}
+    }
+    if (db){
+      db.doc("settings/main").get().then(snap => { if (snap.exists){ settings = { ...settings, ...snap.data() }; render(); } }).catch(() => {});
+      db.collection("seals").onSnapshot(snap => {
+        seals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        mode = "db";
+        render();
+      }, err => {
+        if (mode === "loading"){ mode = "local"; lsLoad(); render(); }
+        toast("Live sync stopped. Reload the page to reconnect.");
+      });
+      render();
+    } else {
+      mode = "local"; lsLoad(); render();
+    }
+  })();
+})();
+</script>
+<script>
+(() => {
+  const KEY = "sealed-first-v1";
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || "null") || { seals: [], settings: {} }; } catch (e) { return { seals: [], settings: {} }; } };
+  document.getElementById("io-export").addEventListener("click", () => {
+    const d = read();
+    const blob = new Blob([JSON.stringify(d.seals || [], null, 1)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "seals.json"; document.body.append(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  });
+  document.getElementById("io-file").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      let incoming = JSON.parse(await f.text());
+      if (!Array.isArray(incoming)) incoming = incoming.seals || [];
+      incoming = incoming.map(x => (x && x.data && !x.q) ? { id: x.id, ...x.data } : x).filter(x => x && x.id && x.q && x.take);
+      const d = read(); const byId = new Map((d.seals || []).map(s => [s.id, s]));
+      let added = 0; incoming.forEach(s => { if (!byId.has(s.id)) added++; byId.set(s.id, { ...(byId.get(s.id) || {}), ...s }); });
+      localStorage.setItem(KEY, JSON.stringify({ seals: [...byId.values()], settings: d.settings || {} }));
+      alert(`Imported ${incoming.length} seals (${added} new).`);
+      location.reload();
+    } catch (err) { alert("That file isn't a Sealed First log. Export one from the app or the skills and try again."); }
+    e.target.value = "";
+  });
+})();
+</script>
+</body>
+</html>

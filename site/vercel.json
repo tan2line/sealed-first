@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "headers": [
+    { "source": "/sealed-first.plugin", "headers": [ { "key": "Content-Type", "value": "application/zip" }, { "key": "Content-Disposition", "value": "attachment; filename=\"sealed-first.plugin\"" } ] },
+    { "source": "/(.*)", "headers": [ { "key": "X-Content-Type-Options", "value": "nosniff" }, { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" } ] }
+  ]
+}

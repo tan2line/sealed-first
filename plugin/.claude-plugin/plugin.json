@@ -1,0 +1,20 @@
+{
+  "name": "sealed-first",
+  "version": "0.2.0",
+  "description": "Seal your own take before an AI answers, get a blind AI answer, and track whether your judgment holds up. Personal judgment retention score plus a team oversight pilot with an evidence report.",
+  "author": {
+    "name": "Andrew Plummer",
+    "email": "drplummer@gmail.com",
+    "url": "https://sealedfirst.com"
+  },
+  "keywords": [
+    "ai-oversight",
+    "human-in-the-loop",
+    "automation-bias",
+    "judgment",
+    "governance"
+  ],
+  "homepage": "https://sealedfirst.com",
+  "repository": "https://github.com/tan2line/sealed-first",
+  "license": "MIT"
+}

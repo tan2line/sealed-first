@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sealed First for Teams</title>
+<meta name="description" content="A pilot that shows whether your human review of AI recommendations is independent, rubber-stamping, or anchored, with an evidence report you can put in the audit file.">
+<meta property="og:title" content="Sealed First for Teams">
+<meta property="og:description" content="Show whether your human review of AI is independent, with evidence.">
+<meta property="og:url" content="https://sealedfirst.com/pilot">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/site.css">
+<style>
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:4px}
+  .kpi .v{font-family:var(--f-display);font-size:1.8rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+  .kpi .k{font-weight:600;font-size:.9rem}
+  .kpi .d{color:var(--muted);font-size:.82rem}
+  .report{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+  .banner{border-radius:10px;padding:14px 16px;border:1px solid var(--line);border-left:6px solid var(--warn);background:var(--sunk);display:flex;flex-direction:column;gap:4px}
+  .banner b{font-family:var(--f-display);font-size:1.3rem}
+  dl.terms{display:grid;grid-template-columns:minmax(0,12rem) minmax(0,1fr);gap:10px 20px;margin:0}
+  dl.terms dt{font-weight:600}
+  dl.terms dd{margin:0;color:var(--muted)}
+  @media (max-width:620px){ dl.terms{grid-template-columns:1fr;gap:2px} dl.terms dd{margin-bottom:10px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="nav">
+    <a class="brand" href="/"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="7" width="26" height="18" rx="3" fill="var(--accent)"/><path d="M4 9l12 9 12-9" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="19" r="4.2" fill="var(--surface)"/><circle cx="16" cy="19" r="2.2" fill="var(--accent)"/></svg>Sealed First</a>
+    <nav aria-label="Main"><a href="/#how">How it works</a><a href="/#install">Install</a><a href="/pilot">For teams</a><a href="/app">Open the app</a></nav>
+  </header>
+
+  <section class="first">
+    <div class="stack" style="max-width:780px">
+      <span class="label">Sealed First for Teams</span>
+      <h1>Prove your human review is real.</h1>
+      <p class="lede">If people review your AI's recommendations, a pilot shows whether they form their own judgment first, or mostly agree with the machine. You get an evidence report you can put in the audit file.</p>
+      <div class="row" style="margin-top:8px"><a class="btn primary" href="#start">Start a design-partner pilot</a><a class="btn" href="#report">See a sample report</a></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="grid2" style="align-items:start">
+      <div class="stack">
+        <h2>The problem with "a human reviews every case."</h2>
+        <p class="muted narrow">Rules and policies increasingly expect effective human oversight of AI, and they name automation bias as the risk to guard against. But a review step can look fine on paper while reviewers approve whatever the AI suggests. Nothing in a normal audit trail tells the two apart.</p>
+      </div>
+      <div class="stack narrow">
+        <p><b>The sealed step tells them apart.</b> Before the AI's recommendation is shown, the reviewer records their own call. Then it's revealed, and they submit a final decision with a reason for any change.</p>
+        <p>Later, QA records the correct decision from appeals, audits, or chart review. Reviewers never grade their own work.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="report">
+    <div class="stack" style="gap:20px">
+      <div class="stack" style="gap:8px"><span class="label">What you get</span><h2>An oversight evidence report.</h2></div>
+      <div class="report" aria-label="Sample report with example numbers">
+        <span class="label">Sample · example numbers · prior authorization review · 64 reviews, 5 reviewers</span>
+        <div class="banner"><span class="label">Oversight status</span><b>Anchoring risk</b><span class="muted">Reviewers often switch to the AI after disagreeing, and outcome checks show those switches hurting more than helping.</span></div>
+        <div class="kpis">
+          <div class="kpi"><span class="v">81%</span><span class="k">Matched the AI before seeing it</span><span class="d">High is fine when cases are easy.</span></div>
+          <div class="kpi"><span class="v">58%</span><span class="k">Switched to the AI after disagreeing</span><span class="d">12 disagreements. The anchoring signal.</span></div>
+          <div class="kpi"><span class="v">9%</span><span class="k">Final decision overrode the AI</span><span class="d">How often the human check changed the outcome.</span></div>
+          <div class="kpi"><span class="v">2 / 4</span><span class="k">Switches that helped / hurt</span><span class="d">From 22 outcome checks.</span></div>
+        </div>
+        <p class="muted" style="font-size:.9rem">The full report adds attestation and documentation rates, accuracy of the sealed call, the AI and the final decision, a per-reviewer table framed for coaching, the limits of the evidence, and a recommendation. Raw evidence exports as a CSV.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="stack" style="gap:20px">
+      <div class="stack" style="gap:8px"><span class="label">How a pilot runs</span><h2>One workflow, one quarter.</h2></div>
+      <dl class="terms">
+        <dt>Scope</dt><dd>One decision where people review an AI recommendation: prior authorization, claims, coding, contract review, triage, analysis.</dd>
+        <dt>Setup</dt><dd>Your review tool hides the AI's recommendation until the reviewer records a first call. Without that, the seal records intent, not independence, and the report says so.</dd>
+        <dt>Reviewers</dt><dd>Each reviewer sees only their own record. Pilot leads see everything and enter outcomes.</dd>
+        <dt>Data</dt><dd>Case reference numbers only. No names, dates of birth, member or record numbers. The pilot records decisions about the AI, not the case itself.</dd>
+        <dt>Sample</dt><dd>20 reviews for a first reading, 10 outcome checks before any conclusion about switching.</dd>
+        <dt>Exit</dt><dd>The evidence report, the CSV for your audit file, and a recommendation: keep the review step, change how it works, or redesign it.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="start">
+    <div class="grid2" style="align-items:start">
+      <div class="stack">
+        <h2>Design-partner pilots are open.</h2>
+        <p class="muted narrow">The first pilots are free in exchange for feedback. Send a short note with the workflow you'd test, roughly how many reviews a week, and who would enter outcomes.</p>
+      </div>
+      <div class="card">
+        <span class="label">Contact</span>
+        <p style="color:var(--ink);font-size:1.1rem;font-weight:600" id="email">drplummer@gmail.com</p>
+        <div class="row"><a class="btn primary" href="mailto:drplummer@gmail.com?subject=Sealed%20First%20pilot">Email about a pilot</a><button class="btn" id="copy" type="button">Copy address</button></div>
+        <p style="font-size:.85rem">Pilots are run by someone independent of the workflow being assessed.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Built by Andrew Plummer, MD, MPH. (Views my own.)</span>
+    <span class="row" style="gap:16px"><a href="/privacy">Privacy</a><a href="https://github.com/tan2line/sealed-first">GitHub</a><a href="/">Home</a></span>
+  </footer>
+</div>
+<script>
+document.getElementById("copy").addEventListener("click", async e => {
+  try { await navigator.clipboard.writeText("drplummer@gmail.com"); e.target.textContent = "Copied"; }
+  catch (_) { const r = document.createRange(); r.selectNodeContents(document.getElementById("email")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); e.target.textContent = "Selected, press copy"; }
+});
+</script>
+</body>
+</html>
